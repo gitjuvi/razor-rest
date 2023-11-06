@@ -1,0 +1,44 @@
+﻿@page
+@model TeeVitsiModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div>
+    <form>
+        <div class="form-group">
+            <label asp-for="Otsikko">Vitsin otsikko</label>
+            <input asp-for="Otsikko" class="form-control">
+        </div>
+        <div class="form-group">
+            <label asp-for="Vitsiteksti">Vitsi</label>
+            <input asp-for="Vitsiteksti" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary" id="tallenna">Lähetä</button>
+    </form>
+</div>
+
+@section scripts{
+<script type="text/javascript">
+    $(function () {
+
+        $('#tallenna').on('click', function (e) {
+            e.preventDefault();
+            var url = '/rest/vitsit';
+            var method = 'post';
+            var vitsi = {};
+            $.each($(this).closest('form').serializeArray(), function () {
+                    vitsi[this.name] = this.value || '';
+            });
+            $.ajax({
+                type: method,
+                url: url,
+                data: JSON.stringify(vitsi),
+                contentType: 'application/json'
+            }).done(function () {
+                alert('Vitsi tallennettu.')
+            });
+        });
+    });
+</script>
+}

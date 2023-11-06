@@ -1,0 +1,31 @@
+﻿@page
+@model LueVitsitModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div id="vitsit-divi"></div>
+
+@section scripts{
+<script type="text/javascript">
+    const divi = document.getElementById('vitsit-divi');
+    divi.innerHTML = '';
+
+    fetch("/rest/vitsit")
+    .then(response => response.json())
+    .then(vitsit => {
+        for(let i = 0;i < vitsit.length;i++){
+            // luodaan div-kentän sisällöksi jokaisen vitsin kohdalla <h1>Otsikko</h1><p>Vitsiteksti</p>
+            // Huomaa, että täällä otsikko ja vitsiteksti alkavatkin pienellä kirjaimella
+            let h1 = document.createElement('h1');
+            h1.innerHTML =  `${vitsit[i].otsikko}`;
+            let p = document.createElement('p');
+            p.innerHTML =  `${vitsit[i].vitsiteksti}`;
+
+            divi.appendChild(h1);
+            divi.appendChild(p);
+        }
+    });
+
+</script>
+}
