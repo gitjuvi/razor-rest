@@ -287,3 +287,14 @@ app.MapGet("/rest/vitsit",  (IVitsiService service) =>
 - LueVitsit-sivulla oleva javascript (jQuery) hakee vitsit tästä REST-rajapinnasta.
 - Tämä REST-api-kutsu taas kutsuu VitsiServicen HaeVitsit-funktiota, joka hakee vitsit tietokannasta ja palauttaa ne.
 
+## Testaaminen
+- Kirjoita terminaaliin: dotnet run
+- Jos kaikki meni hyvin, niin sivusto käynnistyy ja sivuston osoite näkyy terminaalissa.
+- Esimerkiksi: Now listening on: http://localhost:5254
+- Mene nettiselaimella sivulle http://localhost:5254
+- Klikkaa Lähetä vitsi-linkkiä.
+- Kirjoita otsikko ja vitsi ja paina Lähetä-nappia.
+- Jos lähetys onnistui, tulee siitä ilmoitusikkuna.
+- Klikkaa sivuston yläreunassa näkyvää Home-linkkiä.
+- Klikkaa Lue vitsit-linkkiä.
+- Nyt pitäisi näkyä juuri tallennettu vitsi sivulla.
