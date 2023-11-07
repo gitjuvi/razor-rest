@@ -38,7 +38,7 @@ app.MapGet("/rest/vitsit",  (IVitsiService service) =>
     return Results.Ok(service.HaeVitsit());
 });
 
-using (var connection = new SqliteConnection("Data Source=razor.db"))
+using (var connection = new SqliteConnection("Data Source=vitsit.db"))
 {
     connection.Open();
 
