@@ -25,7 +25,7 @@ using (var connection = new SqliteConnection("Data Source=vitsit.db"))
 }
 ```
 - Nämä rivit tekevät tietokantataulun Vitsit, mihin vitsit tallennetaan.
-- Jos tietokanta razor.db on jo olemassa, niin tämä ei tee mitään.
+- Jos taulu Vitsit on jo olemassa, niin tämä ei tee mitään.
 
 ## Vitsi-olio
 - Luo kansio Models samalle tasolle kuin Pages (Paina oikeaa nappia VSCode:n explorer osan alaosassa tiedostojen alla tyhjässä kohdassa ja New Folder).
