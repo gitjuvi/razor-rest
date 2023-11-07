@@ -12,7 +12,7 @@ namespace RazorAPI.Services
         public void TallennaVitsi(Vitsi vitsi)
         {
             // tallenna kantaan vitsi
-            using (var connection = new SqliteConnection("Data Source=razor.db"))
+            using (var connection = new SqliteConnection("Data Source=vitsit.db"))
             {
                 connection.Open();
                 SqliteCommand command = connection.CreateCommand();
@@ -30,7 +30,7 @@ namespace RazorAPI.Services
             List<Vitsi> vitsit = new List<Vitsi>();
 
             // hae vitsit tietokannasta
-            using (var connection = new SqliteConnection("Data Source=razor.db"))
+            using (var connection = new SqliteConnection("Data Source=vitsit.db"))
             {
                 connection.Open();
                 SqliteCommand command = connection.CreateCommand();
