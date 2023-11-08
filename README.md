@@ -298,3 +298,228 @@ app.MapGet("/rest/vitsit",  (IVitsiService service) =>
 - Klikkaa sivuston yläreunassa näkyvää Home-linkkiä.
 - Klikkaa Lue vitsit-linkkiä.
 - Nyt pitäisi näkyä juuri tallennettu vitsi sivulla.
+
+# KIRJAUTUMINEN
+
+## Asetukset
+
+- Editoi Program.cs-tiedostoa
+- Muuta rivi builder.Services.AddRazorPages();
+```
+builder.Services.AddRazorPages(options =>  
+{  
+    options.Conventions.AuthorizeFolder("/").AllowAnonymousToPage("/Login");   
+});
+```
+- Tällä kerrotaan, että jokainen sivu vaatii sisäänkirjautuneen käyttäjän paitsi Login
+
+- Lisää äskeisen rivin alle tämä:
+```
+builder.Services.AddAuthentication("MunAuthScheme")
+    .AddCookie("MunAuthScheme", options => {
+        options.LoginPath = "/Login";
+        options.LogoutPath = "/Logout";        
+        options.AccessDeniedPath = "/AccessDenied";
+    });
+builder.Services.AddHttpContextAccessor();
+```
+- Tämä kertoo, että tallennetaan autentikoitu käyttäjä keksiin MunAuthScheme, login-sivu on Login, Logout-sivu on Logout ja AccessDenied-sivu on virhe-sivu jos ei ole kirjautunut.
+- AccessDenied-sivua ei ole pakko tehdä, jos ei halua.
+
+- Varmista, että nämä molemmat rivit löytyvät Program.cs-tiedostosta:
+```
+app.UseAuthentication();
+app.UseAuthorization();
+```
+- Nämä rivit kertovat, että käyttäjän kirjautuminen asetetaan päälle.
+- Lisää käyttäjä-taulu tietokantaan, jotta salasana voidaan hakea sieltä (sinne voi myös tallentaa saltin mikäli tällainen on käytössä ja hakea kirjautumisvaiheessa)
+- Muokkaa tietokannan luonti Program.cs-tiedostossa esimerkiksi tällaiseksi:
+```
+    string CreateVitsiTaulu = "CREATE TABLE IF NOT EXISTS Vitsit (Id INTEGER PRIMARY KEY AUTOINCREMENT, Otsikko TEXT, Vitsiteksti TEXT); "
+        + "CREATE TABLE IF NOT EXISTS Tyypit (Id INTEGER PRIMARY KEY AUTOINCREMENT, Tunnus TEXT, Salasana TEXT);";
+    command.CommandText = CreateVitsiTaulu;
+    command.ExecuteNonQuery();
+```
+
+## Sisäänkirjautumissivu
+- Tee tiedosto Pages/Login.cshtml
+```
+@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Login</h1>
+</div>
+
+<div>
+    <p style="color:red;">@Model.Message</p>
+</div>
+<form method="post">
+    <div class="form-group">
+        <label asp-for="Username" class="col-form-label col-md-2"></label>
+        <div class="col-md-10">
+            <input asp-for="Username" />
+        </div>
+    </div>
+    <div class="form-group">
+        <label asp-for="Password" class="col-form-label col-md-2"></label>
+        <div class="col-md-10">
+            <input asp-for="Password" />
+        </div>
+    </div>
+    <div class="form-group">
+        <button class="btn btn-outline-primary btn-sm">Log in</button>
+    </div>
+</form>
+```
+
+- Tee tiedosto Login.cshtml.cs
+```
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Data.Sqlite;
+
+namespace razor.Pages;
+
+public class LoginModel : PageModel
+{
+    [BindProperty]
+    public string Username { get; set; }
+    [BindProperty, DataType(DataType.Password)]
+    public string Password { get; set; }
+    [BindProperty]
+    public string Message { get; set; }
+
+    private readonly ILogger<LoginModel> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public LoginModel(ILogger<LoginModel> logger, IHttpContextAccessor httpContextAccessor)
+    {
+        _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async void OnGet()
+    {
+    }
+
+    public async Task<IActionResult> OnPost()
+    {
+
+        // katso tietokannasta menikö tunnus ja salasana oikein
+        using (var connection = new SqliteConnection("Data Source=vitsit.db"))
+        {
+            connection.Open();
+            SqliteCommand command = connection.CreateCommand();
+
+            command.CommandText = @"SELECT Salasana FROM Tyypit WHERE Tunnus=$tunnus";
+            command.Parameters.AddWithValue("$tunnus", Username);
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    string salasana = reader.GetString(0);
+                    if (Password == salasana)
+                    {
+                        // oli oikein, kirjaudutaan sisään
+                        var claims = new List<Claim>
+                        {
+                            new Claim(ClaimTypes.Name, Username)  
+                        };
+
+                        var claimsIdentity = new ClaimsIdentity(claims, "MunAuthScheme");
+
+                        await _httpContextAccessor.HttpContext
+                            .SignInAsync("MunAuthScheme",
+                                new ClaimsPrincipal(claimsIdentity),
+                                new AuthenticationProperties());
+                        
+                        return RedirectToPage("/Index");
+                    }
+                }
+            }
+            connection.Close();
+        }
+        
+        Message = "Käyttäjänimi tai salasana väärin. Yritä uudelleen.";
+        return Page();
+    }
+}
+
+```
+
+## Uloskirjautumissivu
+- Tee tiedosto Pages/Logout.cshtml
+```
+@page
+@model LogoutModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Bye bye!</h1>
+</div>
+```
+
+- Tee tiedosto Pages/Logout.cshtml.cs
+```
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace razor.Pages;
+
+public class LogoutModel : PageModel
+{
+    private readonly ILogger<LogoutModel> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public LogoutModel(ILogger<LogoutModel> logger, IHttpContextAccessor httpContextAccessor)
+    {
+        _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async void OnGet()
+    {
+        await _httpContextAccessor.HttpContext.SignOutAsync("MunAuthScheme");
+    }
+}
+```
+
+## Lisää Logout-linkki jonnekin
+- Voit lisätä esimerkiksi ylänavigointiin logout-linkin
+- Lisää tiedostoon Pages/Shared/_Layout.cshtml logout-linkki
+```
+<li class="nav-item">
+    <a class="nav-link text-dark" asp-area="" asp-page="/Logout">Logout</a>
+</li>
+```
+
+## Login-linkkiä ei välttämättä tarvitse
+- Sivusto ohjautuu itsestään Login-sivulle, jos käyttäjä ei ole kirjautunut sisään.
+
+## Näytä käyttäjätunnus sivuilla
+- Voit lisätä Pages/Index.cshtml-sivulle käyttäjätunnuksen näkyviin
+```
+<div class="text-center">
+    <h1 class="display-4">Welcome @User.Identity.Name</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <p><a asp-page="/TeeVitsi">Lähetä vitsi</a></p>
+    <p><a asp-page="/LueVitsit">Lue vitsit</a></p>
+</div>
+```
+
+## Jatkokehitystä
+- Kun käyttäjä on kirjautunut sisään, niin käyttäjätunnus pystytään aina selvittämään kun esimerkiksi vitsi lisätään tietokantaan.
+- Tällöin vitsille voi asettaa tämän käyttäjän tekijäksi
+
+## Kirjautumisen testaus
+- Avaa kaksi eri selainta... esimerkiksi Chrome ja Edge ja kirjaudu molemmilla sisään eri käyttäjänä, tällöin molemmilla näkyy oma käyttäjätunnus etusivulla.
+- Logout-sivulla kun käy, ei enää pitäisi päästä mitenkään muille sivuille.
