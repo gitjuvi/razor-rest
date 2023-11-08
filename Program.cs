@@ -5,8 +5,20 @@ using RazorAPI.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages(options =>  
+{  
+    options.Conventions.AuthorizeFolder("/").AllowAnonymousToPage("/Login");   
+});
 builder.Services.AddSingleton<IVitsiService, VitsiService>();
+
+// Authentication
+builder.Services.AddAuthentication("MunAuthScheme")
+    .AddCookie("MunAuthScheme", options => {
+        options.LoginPath = "/Login";
+        options.LogoutPath = "/Logout";        
+        options.AccessDeniedPath = "/AccessDenied";
+    });
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
@@ -23,6 +35,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+// Remember both of these to get authentication
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
@@ -44,7 +58,8 @@ using (var connection = new SqliteConnection("Data Source=vitsit.db"))
 
     SqliteCommand command = connection.CreateCommand();
 
-    string CreateVitsiTaulu = "CREATE TABLE IF NOT EXISTS Vitsit (Id INTEGER PRIMARY KEY AUTOINCREMENT, Otsikko TEXT, Vitsiteksti TEXT);";
+    string CreateVitsiTaulu = "CREATE TABLE IF NOT EXISTS Vitsit (Id INTEGER PRIMARY KEY AUTOINCREMENT, Otsikko TEXT, Vitsiteksti TEXT); "
+        + "CREATE TABLE IF NOT EXISTS Tyypit (Id INTEGER PRIMARY KEY AUTOINCREMENT, Tunnus TEXT, Salasana TEXT);";
     command.CommandText = CreateVitsiTaulu;
     command.ExecuteNonQuery();
 
